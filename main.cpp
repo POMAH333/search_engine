@@ -6,6 +6,7 @@
 #include <exception>
 
 #include "nlohmann/json.hpp"
+#include "gtest/gtest.h"
 
 using namespace std;
 using namespace nlohmann;
@@ -121,6 +122,11 @@ void ConverterJSON::putAnswers(vector<vector<pair<int, float>>> answers)
     ofstream fileAnswer("answer.json");
     if (fileAnswer.is_open())
         fileAnswer << dictAnswers;
+}
+
+TEST(sample_test_case, sample_test)
+{
+    EXPECT_EQ(1, 1);
 }
 
 int main(int, char **)
