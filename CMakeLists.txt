@@ -12,6 +12,8 @@ target_link_libraries(search_engine PRIVATE nlohmann_json::nlohmann_json)
 include(CTest)
 enable_testing()
 
+add_compile_definitions(MYPROJECT_VERSION="${PROJECT_VERSION}")
+
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
