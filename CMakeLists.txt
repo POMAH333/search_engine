@@ -10,7 +10,7 @@ endif()
 
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 
-add_subdirectory(nlohmann_json)
+add_subdirectory(nlohmann_json)          
 
 include(FetchContent)
 # FetchContent_Declare(
@@ -51,6 +51,8 @@ target_link_libraries(search_engine PRIVATE gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(search_engine)
+
+add_test(NAME all_tests COMMAND search_engine --gtest)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

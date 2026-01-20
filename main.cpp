@@ -20,7 +20,7 @@ class ConverterJSON
     json dictRequests;
 
 public:
-    ConverterJSON() = default;
+    ConverterJSON();
     /**
      * Метод получения содержимого файлов
      * @return Возвращает список с содержимым файлов перечисленных
@@ -129,7 +129,14 @@ TEST(sample_test_case, sample_test)
     EXPECT_EQ(1, 1);
 }
 
-int main(int, char **)
+int main(int argc, char **argv)
 {
+    // Если передан аргумент --gtest, запускаем тесты
+    if (argc > 1 && std::string(argv[1]) == "--gtest")
+    {
+        ::testing::InitGoogleTest(&argc, argv);
+        return RUN_ALL_TESTS();
+    }
+
     std::cout << "Hello, from search_engine!\n";
 }
