@@ -16,11 +16,16 @@ using namespace nlohmann;
  */
 class ConverterJSON
 {
+    string pathConfig = "config.json";
+    string pathRequests = "requests.json";
+    string pathAnswer = "answer.json";
+
     json dictConfig;
     json dictRequests;
 
 public:
-    ConverterJSON();
+    ConverterJSON() = default;
+    ConverterJSON(string config, string requests, string answer);
     /**
      * Метод получения содержимого файлов
      * @return Возвращает список с содержимым файлов перечисленных
@@ -44,9 +49,13 @@ public:
     void putAnswers(std::vector<std::vector<std::pair<int, float>>> answers);
 };
 
-ConverterJSON::ConverterJSON()
+ConverterJSON::ConverterJSON(string _config, string _requests, string _answer)
 {
-    ifstream fileConfig("config.json");
+    pathConfig = _config;
+    pathRequests = _requests;
+    pathAnswer = _answer;
+
+    ifstream fileConfig(pathConfig);
     if (fileConfig.is_open())
         fileConfig >> dictConfig;
     else
@@ -62,13 +71,13 @@ ConverterJSON::ConverterJSON()
     if (conf["version"] != MYPROJECT_VERSION)
         throw runtime_error("Has incorrect file version!");
 
-    ifstream fileRequests("requests.json");
+    ifstream fileRequests(pathRequests);
     if (fileRequests.is_open())
         fileRequests >> dictRequests;
 
     fileRequests.close();
 
-    ofstream fileAnswer("answer.json");
+    ofstream fileAnswer(pathAnswer);
     fileAnswer.close();
 }
 
