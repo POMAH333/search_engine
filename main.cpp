@@ -7,6 +7,7 @@
 #include <thread>
 #include <mutex>
 #include <sstream>
+#include <unordered_set>
 
 #include "nlohmann/json.hpp"
 #include "gtest/gtest.h"
@@ -309,6 +310,166 @@ TEST(TestCaseInvertedIndex, TestInvertedIndexMissingWord)
         {{1, 1}}};
 
     TestInvertedIndexFunctionality(docs, requests, expected);
+}
+
+struct RelativeIndex
+{
+    size_t doc_id;
+    float rank;
+
+    bool operator==(const RelativeIndex &other) const
+    {
+        return (doc_id == other.doc_id && rank == other.rank);
+    }
+};
+
+class SearchServer
+{
+public:
+    /**
+     * @param idx В конструктор класса передаётся ссылка на класс InvertedIndex,
+     * чтобы SearchServer мог узнать частоту слов, встречаемых в запросе.
+     */
+    SearchServer(InvertedIndex &idx) : _index(idx) {};
+
+    /**
+     * Метод обработки поисковых запросов.
+     * @param queries_input Поисковые запросы, взятые из файла requests.json.
+     * @return Возвращает отсортированный список релевантных ответов для заданных запросов.
+     */
+    std::vector<std::vector<RelativeIndex>> search(const std::vector<std::string> &queries_input);
+
+    int respLimit = 5;
+
+private:
+    InvertedIndex &_index;
+};
+
+vector<vector<RelativeIndex>> SearchServer::search(const vector<string> &queries_input)
+{
+    vector<vector<RelativeIndex>> searchResult;
+    for (auto &querie : queries_input)
+    {
+        unordered_set<string> words;
+        istringstream iss(querie);
+        string word;
+        while (iss >> word)
+            words.insert(word);
+
+        float maxAbsoluteRelevance = 0.;
+        map<size_t, float> docAbsRelevance;
+        for (auto &w : words)
+        {
+            auto wordDocs = _index.GetWordCount(w);
+            if (!wordDocs.empty())
+                for (auto &doc : wordDocs)
+                {
+                    docAbsRelevance[doc.doc_id] += doc.count;
+                    if (docAbsRelevance[doc.doc_id] > maxAbsoluteRelevance)
+                        maxAbsoluteRelevance = docAbsRelevance[doc.doc_id];
+                }
+        }
+
+        if (docAbsRelevance.empty())
+        {
+            searchResult.push_back({});
+            continue;
+        }
+
+        vector<RelativeIndex> queryIndex;
+        for (auto it = docAbsRelevance.begin(); it != docAbsRelevance.end(); it++)
+            queryIndex.push_back({it->first, it->second / maxAbsoluteRelevance});
+
+        int respCount = 0;
+        vector<RelativeIndex> sortQueryIndex;
+        while (!queryIndex.empty())
+        {
+            auto it = queryIndex.begin();
+            auto maxIt = it;
+            it++;
+            for (it; it != queryIndex.end(); it++)
+            {
+                if (it->rank >= maxIt->rank)
+                {
+                    if (it->rank > maxIt->rank)
+                        maxIt = it;
+                    else if (it->doc_id < maxIt->doc_id)
+                        maxIt = it;
+                }
+            }
+
+            sortQueryIndex.push_back(*maxIt);
+            queryIndex.erase(maxIt);
+            respCount++;
+            if (respCount == respLimit)
+                break;
+        }
+
+        searchResult.push_back(sortQueryIndex);
+    }
+
+    return searchResult;
+}
+
+TEST(TestCaseSearchServer, TestSimple)
+{
+    const vector<string> docs = {
+        "milk milk milk milk water water water",
+        "milk water water",
+        "milk milk milk milk milk water water water water water",
+        "americano cappuccino"};
+    const vector<string> request = {"milk water", "sugar"};
+    const std::vector<vector<RelativeIndex>> expected = {
+        {{2, 1},
+         {0, 0.7},
+         {1, 0.3}},
+        {}};
+
+    InvertedIndex idx;
+    idx.UpdateDocumentBase(docs);
+    SearchServer srv(idx);
+    std::vector<vector<RelativeIndex>> result = srv.search(request);
+    ASSERT_EQ(result, expected);
+}
+
+TEST(TestCaseSearchServer, TestTop5)
+{
+    const vector<string> docs = {
+        "london is the capital of great britain",
+        "paris is the capital of france",
+        "berlin is the capital of germany",
+        "rome is the capital of italy",
+        "madrid is the capital of spain",
+        "lisboa is the capital of portugal",
+        "bern is the capital of switzerland",
+        "moscow is the capital of russia",
+        "kiev is the capital of ukraine",
+        "minsk is the capital of belarus",
+        "astana is the capital of kazakhstan",
+        "beijing is the capital of china",
+        "tokyo is the capital of japan",
+        "bangkok is the capital of thailand",
+        "welcome to moscow the capital of russia is third rome",
+        "amsterdam is the capital of netherlands",
+        "helsinki is the capital of finland",
+        "oslo is the capital of norway",
+        "stockholm is the capital of sweden",
+        "riga is the capital of latvia",
+        "tallinn is the capital of estonia",
+        "warsaw is the capital of poland"};
+    const vector<string> request = {"moscow is the capital of russia"};
+    const std::vector<vector<RelativeIndex>> expected = {
+        {{7, 1},
+         {14, 1},
+         {0, 0.666666687},
+         {1, 0.666666687},
+         {2, 0.666666687}}};
+
+    InvertedIndex idx;
+    idx.UpdateDocumentBase(docs);
+    SearchServer srv(idx);
+    std::vector<vector<RelativeIndex>> result = srv.search(request);
+    ASSERT_EQ(result, expected);
 }
 
 int main(int argc, char **argv)
