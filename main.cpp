@@ -96,13 +96,22 @@ vector<string> ConverterJSON::GetTextDocuments()
         if (file.is_open())
         {
             textDocs.push_back(word);
+            int wordCount = 0;
             while (file >> word)
             {
+                if (word.length() > 100)
+                    continue;
+
                 textDocs.back() += word;
                 textDocs.back() += " ";
+                wordCount++;
+                if (wordCount == 1000)
+                    break;
             }
             textDocs.back().pop_back();
         }
+        else
+            throw invalid_argument("File not found!");
 
         file.close();
     }
@@ -118,7 +127,29 @@ int ConverterJSON::GetResponsesLimit()
 
 vector<string> ConverterJSON::GetRequests()
 {
-    return dictRequests["requests"];
+    vector<string> req = dictRequests["requests"];
+    if (req.size() >= 1000)
+        req.clear();
+
+    bool wordLimit = false;
+    for (auto &r : req)
+    {
+        istringstream iss(r);
+        string word;
+        int wordCount;
+        while (iss >> word)
+        {
+            wordCount++;
+            if (wordCount > 10)
+            {
+                wordLimit = true;
+            }
+        }
+    }
+    if (wordLimit)
+        req.clear();
+
+    return req;
 }
 
 void ConverterJSON::putAnswers(vector<vector<pair<int, float>>> answers)
