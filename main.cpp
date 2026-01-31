@@ -91,29 +91,36 @@ vector<string> ConverterJSON::GetTextDocuments()
     vector<string> textDocs;
     for (int i = 0; i < paths.size(); i++)
     {
-        ifstream file(paths[i]);
-        string word = "";
-        if (file.is_open())
+        try
         {
-            textDocs.push_back(word);
-            int wordCount = 0;
-            while (file >> word)
+            ifstream file(paths[i]);
+            string word = "";
+            if (file.is_open())
             {
-                if (word.length() > 100)
-                    continue;
+                textDocs.push_back(word);
+                int wordCount = 0;
+                while (file >> word)
+                {
+                    if (word.length() > 100)
+                        continue;
 
-                textDocs.back() += word;
-                textDocs.back() += " ";
-                wordCount++;
-                if (wordCount == 1000)
-                    break;
+                    textDocs.back() += word;
+                    textDocs.back() += " ";
+                    wordCount++;
+                    if (wordCount == 1000)
+                        break;
+                }
+                textDocs.back().pop_back();
             }
-            textDocs.back().pop_back();
-        }
-        else
-            throw invalid_argument("File not found!");
+            else
+                throw invalid_argument(paths[i]);
 
-        file.close();
+            file.close();
+        }
+        catch (const invalid_argument &x)
+        {
+            cerr << "File " << x.what() << " not found!!!" << endl;
+        }
     }
 
     return textDocs;
@@ -511,5 +518,35 @@ int main(int argc, char **argv)
         return RUN_ALL_TESTS();
     }
 
-    std::cout << "Hello, from search_engine!\n";
+    try
+    {
+        ConverterJSON *converter = new ConverterJSON("config.json", "requests.json", "answer.json");
+        InvertedIndex *invertedIndex = new InvertedIndex();
+        SearchServer *searchServer = new SearchServer(*invertedIndex);
+        searchServer->setRespLimit(converter->GetResponsesLimit());
+
+        invertedIndex->UpdateDocumentBase(converter->GetTextDocuments());
+        auto searchResults = searchServer->search(converter->GetRequests());
+        vector<vector<pair<int, float>>> answers;
+        for (auto &result : searchResults)
+        {
+            vector<pair<int, float>> answer;
+            for (auto &p : result)
+                answer.push_back({(int)p.doc_id, p.rank});
+
+            answers.push_back(answer);
+        }
+
+        converter->putAnswers(answers);
+
+        delete searchServer;
+        delete invertedIndex;
+        delete converter;
+    }
+    catch (const runtime_error &x)
+    {
+        cerr << x.what() << endl;
+    }
+
+    return 0;
 }

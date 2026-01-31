@@ -1,13 +1,13 @@
 {
     "config": {
         "name": "SkillboxSearchEngine",
-        "version": "0.1",
+        "version": "0.9.0",
         "max_responses": 5
     },
     "files": [
-        "../resources/file001.txt",
-        "../resources/file002.txt",
-        "../resources/file003.txt",
-        "../resources/file004.txt"
+        "./resources/file001.txt",
+        "./resources/file002.txt",
+        "./resources/file003.txt",
+        "./resources/file004.txt"
     ]
 }
