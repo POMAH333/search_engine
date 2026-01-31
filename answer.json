@@ -1,32 +1,23 @@
 {
     "answers": {
         "request001": {
-            "result": "true",
             "relevance": [
                 {
+                    "docid": 2,
+                    "rank": 1.0
+                },
+                {
                     "docid": 0,
-                    "rank": 0.989
+                    "rank": 0.699999988079071
                 },
                 {
                     "docid": 1,
-                    "rank": 0.897
-                },
-                {
-                    "docid": 2,
-                    "rank": 0.750
+                    "rank": 0.30000001192092896
                 }
-            ]
+            ],
+            "result": "true"
         },
         "request002": {
-            "result": "true",
-            "relevance": [
-                {
-                    "docid": 0,
-                    "rank": 0.769
-                }
-            ]
-        },
-        "request003": {
             "result": "false"
         }
     }
