@@ -370,10 +370,17 @@ public:
      */
     std::vector<std::vector<RelativeIndex>> search(const std::vector<std::string> &queries_input);
 
-    int respLimit = 5;
-
 private:
     InvertedIndex &_index;
+
+    int respLimit = 5;
+
+public:
+    void setRespLimit(int _responseLimit)
+    {
+        if (_responseLimit > 0)
+            respLimit = _responseLimit;
+    }
 };
 
 vector<vector<RelativeIndex>> SearchServer::search(const vector<string> &queries_input)
@@ -388,7 +395,7 @@ vector<vector<RelativeIndex>> SearchServer::search(const vector<string> &queries
             words.insert(word);
 
         float maxAbsoluteRelevance = 0.;
-        map<size_t, float> docAbsRelevance;
+        map<size_t, float, std::greater<size_t>> docAbsRelevance;
         for (auto &w : words)
         {
             auto wordDocs = _index.GetWordCount(w);
@@ -407,30 +414,22 @@ vector<vector<RelativeIndex>> SearchServer::search(const vector<string> &queries
             continue;
         }
 
-        vector<RelativeIndex> queryIndex;
         for (auto it = docAbsRelevance.begin(); it != docAbsRelevance.end(); it++)
-            queryIndex.push_back({it->first, it->second / maxAbsoluteRelevance});
+            it->second /= maxAbsoluteRelevance;
 
         int respCount = 0;
         vector<RelativeIndex> sortQueryIndex;
-        while (!queryIndex.empty())
+        while (!docAbsRelevance.empty())
         {
-            auto it = queryIndex.begin();
+            auto it = docAbsRelevance.begin();
             auto maxIt = it;
             it++;
-            for (it; it != queryIndex.end(); it++)
-            {
-                if (it->rank >= maxIt->rank)
-                {
-                    if (it->rank > maxIt->rank)
-                        maxIt = it;
-                    else if (it->doc_id < maxIt->doc_id)
-                        maxIt = it;
-                }
-            }
+            for (it; it != docAbsRelevance.end(); it++)
+                if (it->second >= maxIt->second)
+                    maxIt = it;
 
-            sortQueryIndex.push_back(*maxIt);
-            queryIndex.erase(maxIt);
+            sortQueryIndex.push_back({maxIt->first, maxIt->second});
+            docAbsRelevance.erase(maxIt);
             respCount++;
             if (respCount == respLimit)
                 break;
